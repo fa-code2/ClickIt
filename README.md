@@ -1,10 +1,9 @@
-# MicroGov
-
-MicroGov is a civic technology platform that connects citizens with local government through a public complaint and work-order system. It combines a citizen portal, municipal dashboard, AI-assisted complaint classification, automated department routing, and a transparent community feed to improve public service response.
+# ClickIt
+ClickIt is a civic technology platform that connects citizens with local government through a public complaint and work-order system. It combines a citizen portal, municipal dashboard, AI-assisted complaint classification, automated department routing, and a transparent community feed to improve public service response.
 
 ## Overview
 
-MicroGov helps city residents report infrastructure and public service issues while allowing municipal teams to:
+ClickIt helps city residents report infrastructure and public service issues while allowing municipal teams to:
 
 - receive and triage complaints
 - assign work orders automatically
