@@ -1,10 +1,14 @@
 import React, { useState } from 'react';
 import { api } from '../services/api';
 import CommunityFeed from '../components/CommunityFeed';
-import { Camera, MapPin, Building, ShieldCheck, CheckCircle2, Newspaper, PlusCircle, ArrowRight } from 'lucide-react';
+import VoiceRecorder from '../components/VoiceRecorder';
+import GpsLocationTag from '../components/GpsLocationTag';
+import TrackIssues from '../components/TrackIssues';
+import CivicRewards from '../components/CivicRewards';
+import { Camera, MapPin, Building, ShieldCheck, CheckCircle2, Newspaper, PlusCircle, ArrowRight, Clock, Coins, Sparkles } from 'lucide-react';
 
 export default function CitizenPortal() {
-  const [activeTab, setActiveTab] = useState('feed'); // 'feed' | 'report' | 'ward'
+  const [activeTab, setActiveTab] = useState('feed'); // 'feed' | 'report' | 'track' | 'rewards' | 'ward'
 
   // Current logged in user from localStorage
   const savedUser = localStorage.getItem('user');
@@ -13,11 +17,14 @@ export default function CitizenPortal() {
   // Report Form State
   const [image, setImage] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
+  const [audioFile, setAudioFile] = useState(null);
+  const [coords, setCoords] = useState({ latitude: 23.6889, longitude: 86.9661 });
   const [description, setDescription] = useState('');
   const [ward, setWard] = useState(currentUser?.ward || '');
   const [city, setCity] = useState(currentUser?.city || '');
   const [loading, setLoading] = useState(false);
   const [submissionSuccess, setSubmissionSuccess] = useState(null);
+  const [coinsEarned, setCoinsEarned] = useState(0);
 
   const handleImageChange = (e) => {
     const file = e.target.files[0];
@@ -36,10 +43,14 @@ export default function CitizenPortal() {
 
     setLoading(true);
     setSubmissionSuccess(null);
+    setCoinsEarned(0);
 
     const submitWithCoords = async (lat, lon) => {
       const formData = new FormData();
       formData.append('image', image);
+      if (audioFile) {
+        formData.append('audio', audioFile);
+      }
       formData.append('description', description);
       formData.append('latitude', lat);
       formData.append('longitude', lon);
@@ -51,9 +62,21 @@ export default function CitizenPortal() {
       try {
         const result = await api.createComplaint(formData);
         setSubmissionSuccess(result);
+
+        // Award Citizen GovCoins
+        const rewardAmount = audioFile ? 75 : 50;
+        await api.earnGovCoins(
+          currentUser?.id || 'citizen-guest',
+          rewardAmount,
+          'COMPLAINT_FILED',
+          `Filed issue: ${result.issue_type || 'Civic Defect'} with geotagged ${audioFile ? 'photo & voice' : 'photo'} proof`
+        );
+        setCoinsEarned(rewardAmount);
+
         setDescription('');
         setImage(null);
         setImagePreview(null);
+        setAudioFile(null);
       } catch (err) {
         alert('Network error submitting complaint. Please check your connection.');
       } finally {
@@ -61,18 +84,7 @@ export default function CitizenPortal() {
       }
     };
 
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => submitWithCoords(pos.coords.latitude, pos.coords.longitude),
-        () => {
-          // Fallback coordinates for demo area
-          submitWithCoords(23.6889, 86.9661);
-        },
-        { timeout: 8000 }
-      );
-    } else {
-      submitWithCoords(23.6889, 86.9661);
-    }
+    submitWithCoords(coords.latitude, coords.longitude);
   };
 
   return (
@@ -87,15 +99,15 @@ export default function CitizenPortal() {
             </span>
           </h1>
           <p className="text-pink-grapefruit font-semibold text-sm mt-1">
-            Community-powered civic issue reporting, upvoting, and resolution tracking
+            Community-powered civic issue reporting, upvoting, GovCoins rewards, and resolution tracking
           </p>
         </div>
 
         {/* Tab Buttons */}
-        <div className="flex items-center gap-2 bg-white p-1.5 rounded-2xl border-2 border-vanilla shadow-xs">
+        <div className="flex flex-wrap items-center gap-2 bg-white p-1.5 rounded-2xl border-2 border-vanilla shadow-xs">
           <button
             onClick={() => setActiveTab('feed')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-extrabold transition ${
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-extrabold transition ${
               activeTab === 'feed'
                 ? 'bg-raspberry text-white shadow-xs'
                 : 'text-slate-600 hover:bg-vanilla/40 hover:text-raspberry'
@@ -107,7 +119,7 @@ export default function CitizenPortal() {
 
           <button
             onClick={() => setActiveTab('report')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-extrabold transition ${
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-extrabold transition ${
               activeTab === 'report'
                 ? 'bg-raspberry text-white shadow-xs'
                 : 'text-slate-600 hover:bg-vanilla/40 hover:text-raspberry'
@@ -118,8 +130,32 @@ export default function CitizenPortal() {
           </button>
 
           <button
+            onClick={() => setActiveTab('track')}
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-extrabold transition ${
+              activeTab === 'track'
+                ? 'bg-raspberry text-white shadow-xs'
+                : 'text-slate-600 hover:bg-vanilla/40 hover:text-raspberry'
+            }`}
+          >
+            <Clock className="w-4 h-4" />
+            <span>Track Status</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('rewards')}
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-extrabold transition ${
+              activeTab === 'rewards'
+                ? 'bg-raspberry text-white shadow-xs'
+                : 'text-slate-600 hover:bg-vanilla/40 hover:text-raspberry'
+            }`}
+          >
+            <Coins className="w-4 h-4 text-lemon fill-lemon" />
+            <span>GovCoins & Perks</span>
+          </button>
+
+          <button
             onClick={() => setActiveTab('ward')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-extrabold transition ${
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-extrabold transition ${
               activeTab === 'ward'
                 ? 'bg-raspberry text-white shadow-xs'
                 : 'text-slate-600 hover:bg-vanilla/40 hover:text-raspberry'
@@ -154,19 +190,41 @@ export default function CitizenPortal() {
                   <CheckCircle2 className="w-5 h-5 text-lime" />
                   <span>Report Successfully Registered & Dispatched</span>
                 </div>
+
+                {coinsEarned > 0 && (
+                  <div className="my-2 bg-gradient-to-r from-lemon/20 to-lime/20 border border-lemon/40 p-3 rounded-xl flex items-center justify-between text-xs">
+                    <span className="font-extrabold text-slate-800 flex items-center gap-1.5">
+                      <Coins className="w-4 h-4 text-lemon fill-lemon" />
+                      <span>GovCoins Reward Awarded!</span>
+                    </span>
+                    <span className="font-black text-raspberry bg-white px-2.5 py-1 rounded-lg border border-vanilla shadow-2xs">
+                      +{coinsEarned} GovCoins Credited
+                    </span>
+                  </div>
+                )}
+
                 <p className="text-xs text-slate-700 mb-2 font-medium">
                   Assigned Authority: <strong>{submissionSuccess.local_authority || 'Local Ward Office'}</strong>
                 </p>
                 <p className="text-xs text-slate-600 italic bg-white p-3 rounded-xl border border-vanilla leading-relaxed">
                   {submissionSuccess.routing_notes}
                 </p>
-                <button
-                  onClick={() => setActiveTab('feed')}
-                  className="mt-3 text-xs bg-lime text-white font-black px-4 py-2 rounded-xl hover:opacity-90 transition flex items-center gap-1.5 shadow-xs"
-                >
-                  <span>View on Community Feed</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </button>
+                <div className="flex flex-wrap gap-2 mt-3">
+                  <button
+                    onClick={() => setActiveTab('track')}
+                    className="text-xs bg-raspberry text-white font-black px-4 py-2 rounded-xl hover:opacity-90 transition flex items-center gap-1.5 shadow-xs cursor-pointer"
+                  >
+                    <Clock className="w-3.5 h-3.5" />
+                    <span>Track Status Live</span>
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('feed')}
+                    className="text-xs bg-lime text-white font-black px-4 py-2 rounded-xl hover:opacity-90 transition flex items-center gap-1.5 shadow-xs cursor-pointer"
+                  >
+                    <span>View on Community Feed</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
               </div>
             )}
 
@@ -215,10 +273,17 @@ export default function CitizenPortal() {
               </div>
 
               {/* Description & Voice Notes */}
-              <div>
-                <label className="block text-slate-700 font-bold text-xs uppercase tracking-wider mb-2">
-                  2. Voice Notes or Problem Description
+              <div className="space-y-3">
+                <label className="block text-slate-700 font-bold text-xs uppercase tracking-wider">
+                  2. Voice Notes & Problem Description
                 </label>
+
+                {/* Multimodal Voice Recorder */}
+                <VoiceRecorder
+                  onAudioReady={(file) => setAudioFile(file)}
+                  onClearAudio={() => setAudioFile(null)}
+                />
+
                 <textarea
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
@@ -239,6 +304,13 @@ export default function CitizenPortal() {
                     Auto-Identified
                   </span>
                 </div>
+
+                {/* Real-time GPS Tagging */}
+                <GpsLocationTag
+                  onCoordinatesChanged={(lat, lon) => setCoords({ latitude: lat, longitude: lon })}
+                  initialLat={coords.latitude}
+                  initialLon={coords.longitude}
+                />
 
                 <div className="grid grid-cols-2 gap-3 text-xs">
                   <div>
@@ -279,9 +351,9 @@ export default function CitizenPortal() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-raspberry hover:bg-pink-grapefruit text-white font-extrabold py-4 rounded-2xl transition duration-150 shadow-md flex items-center justify-center gap-2 text-sm disabled:opacity-50"
+                className="w-full bg-raspberry hover:bg-pink-grapefruit text-white font-extrabold py-4 rounded-2xl transition duration-150 shadow-md flex items-center justify-center gap-2 text-sm disabled:opacity-50 cursor-pointer"
               >
-                <span>{loading ? 'Submitting & Routing...' : 'Submit to Community Feed & Municipal Office'}</span>
+                <span>{loading ? 'Submitting & Routing...' : 'Submit to Community Feed & Municipal Office (+50 GovCoins)'}</span>
                 {!loading && <ArrowRight className="w-4 h-4" />}
               </button>
             </form>
@@ -289,7 +361,13 @@ export default function CitizenPortal() {
         </div>
       )}
 
-      {/* TAB 3: My Ward & Civic Representative */}
+      {/* TAB 3: Complaint Tracking & Resolution Timeline */}
+      {activeTab === 'track' && <TrackIssues currentUser={currentUser} />}
+
+      {/* TAB 4: Citizen GovCoins & Local Vouchers Marketplace */}
+      {activeTab === 'rewards' && <CivicRewards currentUser={currentUser} />}
+
+      {/* TAB 5: My Ward & Civic Representative */}
       {activeTab === 'ward' && (
         <div className="max-w-3xl mx-auto space-y-6">
           <div className="bg-white p-8 rounded-3xl border-2 border-vanilla shadow-xs">

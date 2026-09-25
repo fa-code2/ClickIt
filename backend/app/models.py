@@ -91,3 +91,72 @@ class WorkOrder(Base):
     created_at = Column(DateTime, server_default=func.now())
 
     complaint = relationship("Complaint", back_populates="work_order")
+
+# ==============================================================================
+# ADDITIVE EXTENSIONS: GovCoins, Civic Vouchers, Officer Rewards & AI Verification
+# ==============================================================================
+
+class GovCoinTransaction(Base):
+    __tablename__ = "govcoin_transactions"
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id = Column(String, index=True, nullable=False)
+    amount = Column(Integer, nullable=False)
+    transaction_type = Column(String, nullable=False)  # "COMPLAINT_FILED", "VOICE_BONUS", "VOUCHER_REDEEMED", "RESOLUTION_REWARD"
+    description = Column(String, nullable=False)
+    created_at = Column(DateTime, server_default=func.now())
+
+class CivicVoucher(Base):
+    __tablename__ = "civic_vouchers"
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    title = Column(String, nullable=False)
+    category = Column(String, nullable=False)  # "TRANSIT", "CIVIC", "ECO", "COMMUNITY", "FOOD"
+    cost = Column(Integer, nullable=False)
+    description = Column(Text, nullable=False)
+    discount_code = Column(String, nullable=False)
+    partner_name = Column(String, nullable=False)
+    icon_name = Column(String, default="Ticket")
+    is_active = Column(Integer, default=1)
+    created_at = Column(DateTime, server_default=func.now())
+
+class RedeemedVoucher(Base):
+    __tablename__ = "redeemed_vouchers"
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id = Column(String, index=True, nullable=False)
+    voucher_id = Column(String, ForeignKey("civic_vouchers.id"), nullable=True)
+    voucher_title = Column(String, nullable=False)
+    code = Column(String, nullable=False)
+    cost = Column(Integer, nullable=False)
+    status = Column(String, default="ACTIVE")  # "ACTIVE", "USED"
+    partner_name = Column(String, nullable=True)
+    category = Column(String, nullable=True)
+    redeemed_at = Column(DateTime, server_default=func.now())
+
+class OfficerReward(Base):
+    __tablename__ = "officer_rewards"
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    officer_id = Column(String, index=True, nullable=False)
+    officer_name = Column(String, nullable=False)
+    badge_name = Column(String, nullable=False)
+    points = Column(Integer, default=100)
+    complaint_id = Column(String, nullable=True)
+    reason = Column(String, nullable=False)
+    awarded_at = Column(DateTime, server_default=func.now())
+
+class VerificationAudit(Base):
+    __tablename__ = "verification_audits"
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    work_order_id = Column(String, nullable=False)
+    complaint_id = Column(String, nullable=False)
+    before_image_path = Column(String, nullable=True)
+    after_image_path = Column(String, nullable=False)
+    ai_confidence_score = Column(Float, default=95.0)
+    ai_verdict = Column(String, default="VERIFIED_RESOLVED")  # "VERIFIED_RESOLVED", "MANUAL_REVIEW_REQUIRED"
+    ai_quality = Column(String, default="EXCELLENT")  # "EXCELLENT", "GOOD", "SATISFACTORY"
+    ai_notes = Column(Text, nullable=True)
+    verified_by_officer = Column(String, nullable=True)
+    verified_at = Column(DateTime, server_default=func.now())

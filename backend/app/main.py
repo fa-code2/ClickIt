@@ -5,7 +5,7 @@ import os
 
 from .database import engine
 from .models import Base
-from .routers import complaints, work_orders, auth
+from .routers import complaints, work_orders, auth, rewards, verification
 
 # Create database tables if not exist
 Base.metadata.create_all(bind=engine)
@@ -29,6 +29,8 @@ app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 app.include_router(auth.router)
 app.include_router(complaints.router)
 app.include_router(work_orders.router)
+app.include_router(rewards.router)
+app.include_router(verification.router)
 
 @app.get("/")
 def root():

@@ -1,17 +1,25 @@
 import React, { useEffect, useState } from 'react';
 import Map from '../components/Map';
 import ComplaintCard from '../components/ComplaintCard';
+import AiSeverityModal from '../components/AiSeverityModal';
+import AiVerifyModal from '../components/AiVerifyModal';
+import OfficerRewardsModal from '../components/OfficerRewardsModal';
 import { api } from '../services/api';
-import { RefreshCw, CheckCircle2, Building, Camera, X, Filter, ShieldCheck, ArrowRight } from 'lucide-react';
+import { RefreshCw, CheckCircle2, Building, Camera, X, Filter, ShieldCheck, ArrowRight, Sparkles, Trophy, Flame, Award } from 'lucide-react';
 
 export default function MunicipalDashboard() {
   const [complaints, setComplaints] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedWard, setSelectedWard] = useState('ALL');
   const [selectedStatus, setSelectedStatus] = useState('ALL');
+  const [priorityFilter, setPriorityFilter] = useState('ALL');
 
-  // Resolution Modal state
+  // Inspection & Verification modals
+  const [inspectingComplaint, setInspectingComplaint] = useState(null);
   const [resolvingComplaint, setResolvingComplaint] = useState(null);
+  const [showOfficerRewards, setShowOfficerRewards] = useState(false);
+
+  // Resolution Modal state (kept for backward compatibility)
   const [afterImage, setAfterImage] = useState(null);
   const [afterPreview, setAfterPreview] = useState(null);
   const [resolutionNotes, setResolutionNotes] = useState('');
@@ -93,8 +101,15 @@ export default function MunicipalDashboard() {
 
         <div className="flex items-center gap-3">
           <button
+            onClick={() => setShowOfficerRewards(true)}
+            className="bg-raspberry text-white font-extrabold px-4 py-2.5 rounded-2xl hover:bg-pink-grapefruit transition shadow-xs flex items-center gap-2 text-xs cursor-pointer"
+          >
+            <Trophy className="w-3.5 h-3.5 text-lemon" />
+            <span>Officer Rewards & Badges</span>
+          </button>
+          <button
             onClick={fetchComplaints}
-            className="bg-white border-2 border-vanilla text-raspberry font-extrabold px-4 py-2.5 rounded-2xl hover:bg-vanilla/40 transition shadow-xs flex items-center gap-2 text-xs"
+            className="bg-white border-2 border-vanilla text-raspberry font-extrabold px-4 py-2.5 rounded-2xl hover:bg-vanilla/40 transition shadow-xs flex items-center gap-2 text-xs cursor-pointer"
           >
             <RefreshCw className="w-3.5 h-3.5" />
             <span>Refresh Feed</span>
@@ -146,9 +161,69 @@ export default function MunicipalDashboard() {
             </div>
           </div>
 
+          {/* Priority Queue Filter Chips */}
+          <div className="flex flex-wrap items-center justify-between gap-3 bg-cream/50 p-3.5 rounded-2xl border border-vanilla">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-black text-slate-700 uppercase tracking-wider">
+                Priority Sorting Queue:
+              </span>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                onClick={() => setPriorityFilter('ALL')}
+                className={`px-3 py-1 rounded-xl text-xs font-black transition cursor-pointer ${
+                  priorityFilter === 'ALL'
+                    ? 'bg-raspberry text-white shadow-2xs'
+                    : 'bg-white text-slate-700 border border-vanilla hover:bg-vanilla/40'
+                }`}
+              >
+                All Priorities ({complaints.length})
+              </button>
+              <button
+                onClick={() => setPriorityFilter('CRITICAL')}
+                className={`px-3 py-1 rounded-xl text-xs font-black transition flex items-center gap-1 cursor-pointer ${
+                  priorityFilter === 'CRITICAL'
+                    ? 'bg-raspberry text-white shadow-2xs'
+                    : 'bg-white text-slate-700 border border-vanilla hover:bg-vanilla/40'
+                }`}
+              >
+                <Flame className="w-3 h-3 fill-current text-raspberry" />
+                <span>Critical Priority (85+)</span>
+              </button>
+              <button
+                onClick={() => setPriorityFilter('HIGH')}
+                className={`px-3 py-1 rounded-xl text-xs font-black transition cursor-pointer ${
+                  priorityFilter === 'HIGH'
+                    ? 'bg-raspberry text-white shadow-2xs'
+                    : 'bg-white text-slate-700 border border-vanilla hover:bg-vanilla/40'
+                }`}
+              >
+                High Priority (70-84)
+              </button>
+              <button
+                onClick={() => setPriorityFilter('MEDIUM')}
+                className={`px-3 py-1 rounded-xl text-xs font-black transition cursor-pointer ${
+                  priorityFilter === 'MEDIUM'
+                    ? 'bg-raspberry text-white shadow-2xs'
+                    : 'bg-white text-slate-700 border border-vanilla hover:bg-vanilla/40'
+                }`}
+              >
+                Standard (Below 70)
+              </button>
+            </div>
+          </div>
+
           {/* Your Work Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {complaints.slice(0, 6).map((c) => {
+            {complaints
+              .filter((c) => {
+                if (priorityFilter === 'CRITICAL') return (c.priority_score || 0) >= 85;
+                if (priorityFilter === 'HIGH') return (c.priority_score || 0) >= 70 && (c.priority_score || 0) < 85;
+                if (priorityFilter === 'MEDIUM') return (c.priority_score || 0) < 70;
+                return true;
+              })
+              .slice(0, 6)
+              .map((c) => {
               const citizenName = c.user_name || c.user?.full_name || 'Resident Citizen';
               const defectImg = c.image_url || (c.issue_type?.toLowerCase().includes('pothole')
                 ? '/images/pothole.jpg'
@@ -195,6 +270,15 @@ export default function MunicipalDashboard() {
                     )}
 
                     <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-[10px] font-black text-raspberry bg-vanilla px-2 py-0.5 rounded-md flex items-center gap-1">
+                          <Flame className="w-3 h-3 text-lemon fill-lemon" />
+                          <span>Priority: {c.priority_score || 70}/100</span>
+                        </span>
+                        <span className="text-[10px] font-bold text-slate-500">
+                          {c.severity || 'HIGH'} SEVERITY
+                        </span>
+                      </div>
                       <h3 className="font-black text-slate-900 text-sm line-clamp-1">
                         {c.issue_type || 'Civic Infrastructure Defect'}
                       </h3>
@@ -214,10 +298,20 @@ export default function MunicipalDashboard() {
                         <span className="font-bold text-raspberry">{c.ward || 'Central Zone'}</span>
                       </div>
                     </div>
+
+                    {/* Inspect AI Severity Analysis Trigger */}
+                    <button
+                      type="button"
+                      onClick={() => setInspectingComplaint(c)}
+                      className="w-full py-1.5 rounded-xl bg-white hover:bg-vanilla/60 text-raspberry border border-vanilla text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-2xs cursor-pointer"
+                    >
+                      <Sparkles className="w-3.5 h-3.5 text-raspberry" />
+                      <span>Inspect AI Severity Analysis</span>
+                    </button>
                   </div>
 
                   {/* Officer Action Bar */}
-                  <div className="pt-2 border-t border-vanilla flex items-center justify-between gap-2">
+                  <div className="pt-2 border-t border-vanilla flex flex-col gap-2">
                     {c.status === 'OPEN' && (
                       <button
                         type="button"
@@ -237,21 +331,18 @@ export default function MunicipalDashboard() {
                     {c.status === 'IN_PROGRESS' && (
                       <button
                         type="button"
-                        onClick={() => {
-                          setResolvingComplaint(c);
-                          setResolutionNotes(`Field repair executed for ${c.ward}. Verified on-site.`);
-                        }}
+                        onClick={() => setResolvingComplaint(c)}
                         className="w-full py-2 rounded-xl bg-lime hover:opacity-90 text-white text-xs font-black transition shadow-xs flex items-center justify-center gap-1.5 cursor-pointer"
                       >
-                        <CheckCircle2 className="w-3.5 h-3.5" />
-                        <span>Upload Proof & Resolve</span>
+                        <Sparkles className="w-3.5 h-3.5" />
+                        <span>Auto-Verify via Gemini AI</span>
                       </button>
                     )}
 
                     {c.status === 'RESOLVED' && (
                       <div className="w-full py-2 rounded-xl bg-lime/20 text-lime text-xs font-black text-center flex items-center justify-center gap-1">
                         <CheckCircle2 className="w-3.5 h-3.5" />
-                        <span>Completed & Verified</span>
+                        <span>Verified Resolved via Gemini AI</span>
                       </div>
                     )}
                   </div>
@@ -322,127 +413,61 @@ export default function MunicipalDashboard() {
                   onAddComment={() => {}}
                 />
 
-                {/* Quick Resolve Action for Officers */}
-                {complaint.status !== 'RESOLVED' && (
-                  <div className="mt-3 bg-white p-3.5 rounded-2xl border-2 border-vanilla shadow-xs flex items-center justify-between">
-                    <span className="text-xs font-bold text-slate-700">
-                      Officer Action: Work completed?
-                    </span>
+                {/* Officer Actions on ComplaintCard */}
+                <div className="mt-3 bg-white p-3 rounded-2xl border-2 border-vanilla shadow-xs flex flex-wrap items-center justify-between gap-2">
+                  <button
+                    onClick={() => setInspectingComplaint(complaint)}
+                    className="py-1.5 px-3 rounded-xl bg-cream hover:bg-vanilla text-raspberry border border-vanilla text-xs font-bold transition flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <Sparkles className="w-3.5 h-3.5 text-raspberry" />
+                    <span>Inspect AI Severity</span>
+                  </button>
+
+                  {complaint.status !== 'RESOLVED' ? (
                     <button
-                      onClick={() => {
-                        setResolvingComplaint(complaint);
-                        setResolutionNotes(`Repaired and verified on-site by municipal crew for ${complaint.ward}.`);
-                      }}
-                      className="bg-lime hover:opacity-90 text-white text-xs font-black px-4 py-2 rounded-xl flex items-center gap-1.5 transition shadow-xs"
+                      onClick={() => setResolvingComplaint(complaint)}
+                      className="bg-lime hover:opacity-90 text-white text-xs font-black px-4 py-2 rounded-xl flex items-center gap-1.5 transition shadow-xs cursor-pointer"
                     >
-                      <CheckCircle2 className="w-3.5 h-3.5" />
-                      <span>Upload Repair Proof</span>
+                      <Sparkles className="w-3.5 h-3.5" />
+                      <span>Auto-Verify via Gemini AI</span>
                     </button>
-                  </div>
-                )}
+                  ) : (
+                    <span className="text-xs font-black text-lime bg-lime/10 px-3 py-1.5 rounded-xl border border-lime/30 flex items-center gap-1">
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      <span>Verified Resolved</span>
+                    </span>
+                  )}
+                </div>
               </div>
             ))}
           </div>
         </section>
       </main>
 
-      {/* Resolution & Verification Modal */}
+      {/* Deep Gemini AI Severity Inspection Modal */}
+      {inspectingComplaint && (
+        <AiSeverityModal
+          complaint={inspectingComplaint}
+          onClose={() => setInspectingComplaint(null)}
+        />
+      )}
+
+      {/* Gemini AI Auto-Verify Resolution Modal */}
       {resolvingComplaint && (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fadeIn">
-          <div className="bg-white rounded-3xl max-w-lg w-full p-8 shadow-2xl border-2 border-vanilla space-y-4">
-            <div className="flex justify-between items-center pb-3 border-b border-vanilla">
-              <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
-                <CheckCircle2 className="w-5 h-5 text-lime" />
-                <span>Verify & Resolve Work Order</span>
-              </h3>
-              <button
-                onClick={() => setResolvingComplaint(null)}
-                className="text-slate-400 hover:text-raspberry p-1 rounded-lg transition"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
+        <AiVerifyModal
+          complaint={resolvingComplaint}
+          onClose={() => setResolvingComplaint(null)}
+          onVerified={() => {
+            fetchComplaints();
+          }}
+        />
+      )}
 
-            <div className="text-xs bg-cream p-3.5 rounded-2xl border border-vanilla">
-              <span className="font-extrabold text-slate-900 block">{resolvingComplaint.issue_type}</span>
-              <span className="text-slate-600 font-medium">{resolvingComplaint.ward} | {resolvingComplaint.department}</span>
-            </div>
-
-            <form onSubmit={handleResolveSubmit} className="space-y-4">
-              <div>
-                <label className="block text-slate-700 font-bold text-xs uppercase tracking-wider mb-1.5">
-                  After-Repair Verification Photo
-                </label>
-                <div className="border-2 border-dashed border-vanilla rounded-2xl p-5 text-center bg-cream/30 relative">
-                  {afterPreview ? (
-                    <div>
-                      <img src={afterPreview} alt="After repair" className="max-h-40 mx-auto rounded-xl mb-2 border border-vanilla" />
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setAfterImage(null);
-                          setAfterPreview(null);
-                        }}
-                        className="text-xs text-raspberry font-bold hover:underline"
-                      >
-                        Change photo
-                      </button>
-                    </div>
-                  ) : (
-                    <div>
-                      <Camera className="w-8 h-8 text-pink-grapefruit mx-auto mb-1" />
-                      <p className="text-xs text-slate-700 font-bold">Upload completed repair photo</p>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) => {
-                          const file = e.target.files[0];
-                          if (file) {
-                            setAfterImage(file);
-                            setAfterPreview(URL.createObjectURL(file));
-                          }
-                        }}
-                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                        required
-                      />
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-slate-700 font-bold text-xs uppercase tracking-wider mb-1.5">
-                  Official Resolution Remarks
-                </label>
-                <textarea
-                  value={resolutionNotes}
-                  onChange={(e) => setResolutionNotes(e.target.value)}
-                  placeholder="Details of repair, equipment deployed, inspection outcome..."
-                  className="w-full text-xs border border-vanilla rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-raspberry bg-cream/30 font-medium text-slate-800"
-                  rows="3"
-                  required
-                />
-              </div>
-
-              <div className="flex gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setResolvingComplaint(null)}
-                  className="w-1/2 py-3 rounded-xl border-2 border-vanilla text-slate-700 font-bold text-xs hover:bg-cream transition"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={submittingResolution || !afterImage}
-                  className="w-1/2 py-3 rounded-xl bg-lime hover:opacity-90 text-white font-black text-xs shadow-md disabled:opacity-50 transition flex items-center justify-center gap-1.5"
-                >
-                  {submittingResolution ? 'Submitting...' : 'Confirm Resolution'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+      {/* Officer Merit & Performance Rewards Dashboard */}
+      {showOfficerRewards && (
+        <OfficerRewardsModal
+          onClose={() => setShowOfficerRewards(false)}
+        />
       )}
     </div>
   );
