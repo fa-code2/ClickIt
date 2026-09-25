@@ -1,0 +1,116 @@
+### Python ###
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+cover/
+
+# Database / local app data
+*.db
+*.sqlite3
+*.sqlite3-journal
+
+# Logs
+*.log
+logs/
+
+# Django / environment
+local_settings.py
+__pypackages__/
+
+# Images
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.webp
+*.svg
+
+# Environments
+.env
+.env.*
+!.env.example
+.venv/
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# Type checkers
+.pyre/
+.pytype/
+.mypy_cache/
+.pyrightconfig.json
+
+# Python tooling
+*.pyo
+*.pyd
+
+### React / Node ###
+.DS_*
+**/*.backup.*
+**/*.back.*
+node_modules/
+bower_components/
+dist/
+.vite/
+.next/
+out/
+coverage/
+
+### Editor / OS ###
+.vscode/
+.idea/
+*.sublime-
+*.swp
+*.swo
+Thumbs.db
+Desktop.ini
+
+### Misc ###
+psd/
+thumb/
+sketch/
