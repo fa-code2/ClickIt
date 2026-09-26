@@ -111,3 +111,122 @@ source .venv/bin/activate   # Linux/macOS
 .venv\Scripts\activate      # Windows PowerShell
 
 pip install -r requirements.txt
+
+
+```
+
+Create environment variables in a `.env` file inside the `backend` folder:
+
+```env
+DATABASE_URL=sqlite:///./microgov.db
+GEMINI_API_KEY=your_gemini_api_key_here
+JWT_SECRET_KEY=change_this_super_secret_key_in_production
+JWT_ALGORITHM=HS256
+GOOGLE_CLIENT_ID=your_google_client_id
+
+```
+
+Run the API server:
+
+```bash
+uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
+
+```
+
+API documentation will be available at:
+
+* Interactive Swagger UI: `http://localhost:8000/docs`
+* ReDoc: `http://localhost:8000/redoc`
+
+### 2. Frontend Setup
+
+From the project root:
+
+```bash
+cd frontend
+npm install
+
+```
+
+Create a `.env` file in the `frontend` folder if needed:
+
+```env
+VITE_API_BASE_URL=http://localhost:8000
+VITE_GOOGLE_CLIENT_ID=your_google_client_id
+
+```
+
+Run the development server:
+
+```bash
+npm run dev
+
+```
+
+The application will launch at:
+
+* `http://localhost:5173`
+
+---
+
+## Common Commands
+
+### Backend
+
+```bash
+cd backend
+uvicorn app.main:app --reload
+
+```
+
+### Frontend
+
+```bash
+cd frontend
+npm install
+npm run dev
+npm run build
+npm run preview
+
+```
+
+---
+
+## Database
+
+The application uses SQLite by default for local development (`microgov.db`). To reset the schema after updating SQLAlchemy models, remove `microgov.db` and restart the FastAPI server to trigger table auto-creation (`Base.metadata.create_all()`).
+
+---
+
+## Deployment
+
+### Frontend Deployment
+
+The React frontend is pre-configured for Vercel deployment using `frontend/vercel.json`.
+
+### Backend Deployment
+
+The FastAPI backend can be deployed to services such as:
+
+* Render
+* Railway
+* Fly.io
+* Any Python-compatible Docker container platform
+
+See `VERCEL_DEPLOYMENT_GUIDE.md` for step-by-step deployment instructions.
+
+---
+
+## Notes
+
+* Uploaded image and audio files are served statically from the `backend/uploads` directory.
+* CORS is pre-configured to accept requests from localhost during development.
+* Ensure production environments use strong JWT secret keys and restrictive origin policies.
+
+---
+
+## License
+
+This project is intended for hackathon, educational, and prototype/demo use unless specified otherwise by the repository owner.
+
+```
